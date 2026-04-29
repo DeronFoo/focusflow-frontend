@@ -1,4 +1,4 @@
-// Timer Logic
+// TIMER LOGIC
 let timeLeft = 25 * 60; // 25 minutes
 let timerId = null;
 const timerDisplay = document.getElementById('timer-display');
@@ -28,13 +28,56 @@ document.getElementById('reset-btn').addEventListener('click', () => {
     updateDisplay();
 });
 
-// Basic Task Logic (Local UI only for Task 3.1)
-document.getElementById('add-task-btn').addEventListener('click', () => {
-    const input = document.getElementById('new-task');
-    if (!input.value.trim()) return;
 
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${input.value}</span> <button class="delete-btn" onclick="this.parentElement.remove()">X</button>`;
-    document.getElementById('task-list').appendChild(li);
+// FULL-STACK DATABASE LOGIC (Task 3.3)
+
+// Render API URL
+const API_URL = 'https://focusflow-api-deron.onrender.com/api/tasks';
+
+// READ: Fetch tasks from database on load
+async function loadTasks() {
+    try {
+        const response = await fetch(API_URL);
+        const tasks = await response.json();
+        const taskList = document.getElementById('task-list');
+        
+        taskList.innerHTML = ''; // Clear current list before loading new ones
+        
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${task.title}</span> <button class="delete-btn" onclick="this.parentElement.remove()">X</button>`;
+            taskList.appendChild(li);
+        });
+    } catch (error) {
+        console.error("Error fetching tasks from database:", error);
+    }
+}
+
+// WRITE: Send new task to database
+document.getElementById('add-task-btn').addEventListener('click', async () => {
+    const input = document.getElementById('new-task');
+    const taskTitle = input.value.trim();
+    
+    if (!taskTitle) return; // Don't submit empty tasks
+
+    // Clear the input box immediately for a snappy user experience
     input.value = '';
+
+    try {
+        // Send the data to your Fastify backend
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: taskTitle })
+        });
+
+        // Once successfully saved, reload the list from the database
+        loadTasks(); 
+    } catch (error) {
+        console.error("Error saving task:", error);
+        alert("Failed to save task to database. Check the console.");
+    }
 });
+
+// Initial load when the page opens
+loadTasks();
