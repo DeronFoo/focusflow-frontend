@@ -1,60 +1,83 @@
-import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+// TIMER LOGIC
+let timeLeft = 25 * 60; // 25 minutes
+let timerId = null;
+const timerDisplay = document.getElementById('timer-display');
 
-document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+function updateDisplay() {
+    const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const seconds = (timeLeft % 60).toString().padStart(2, '0');
+    timerDisplay.textContent = `${minutes}:${seconds}`;
+}
 
-<div class="ticks"></div>
+document.getElementById('start-btn').addEventListener('click', () => {
+    if (timerId) return; // Prevent multiple intervals
+    timerId = setInterval(() => {
+        timeLeft--;
+        updateDisplay();
+        if (timeLeft <= 0) {
+            clearInterval(timerId);
+            alert("Pomodoro complete! Take a break.");
+        }
+    }, 1000);
+});
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+document.getElementById('reset-btn').addEventListener('click', () => {
+    clearInterval(timerId);
+    timerId = null;
+    timeLeft = 25 * 60;
+    updateDisplay();
+});
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
 
-setupCounter(document.querySelector('#counter'))
+// FULL-STACK DATABASE LOGIC (Task 3.3)
+
+// Render API URL
+const API_URL = 'https://focusflow-api-deron.onrender.com/api/tasks';
+
+// READ: Fetch tasks from database on load
+async function loadTasks() {
+    try {
+        const response = await fetch(API_URL);
+        const tasks = await response.json();
+        const taskList = document.getElementById('task-list');
+        
+        taskList.innerHTML = ''; // Clear current list before loading new ones
+        
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${task.title}</span> <button class="delete-btn" onclick="this.parentElement.remove()">X</button>`;
+            taskList.appendChild(li);
+        });
+    } catch (error) {
+        console.error("Error fetching tasks from database:", error);
+    }
+}
+
+// WRITE: Send new task to database
+document.getElementById('add-task-btn').addEventListener('click', async () => {
+    const input = document.getElementById('new-task');
+    const taskTitle = input.value.trim();
+    
+    if (!taskTitle) return; // Don't submit empty tasks
+
+    // Clear the input box immediately for a snappy user experience
+    input.value = '';
+
+    try {
+        // Send the data to your Fastify backend
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: taskTitle })
+        });
+
+        // Once successfully saved, reload the list from the database
+        loadTasks(); 
+    } catch (error) {
+        console.error("Error saving task:", error);
+        alert("Failed to save task to database. Check the console.");
+    }
+});
+
+// Initial load when the page opens
+loadTasks();
